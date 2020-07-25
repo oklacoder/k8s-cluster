@@ -1,0 +1,3 @@
+(cd ./beats/ && ./teardown)
+(cd ./kibana/ && ./teardown)
+(cd ./elastic && ./teardown)

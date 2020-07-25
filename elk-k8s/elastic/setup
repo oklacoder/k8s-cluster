@@ -1,0 +1,4 @@
+kubectl apply -f `pwd`/namespace.yaml
+kubectl apply -f `pwd`/discovery_service.yaml
+kubectl apply -f `pwd`/service.yaml
+kubectl apply -f `pwd`/statefulset.yaml

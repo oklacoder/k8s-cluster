@@ -1,0 +1,115 @@
+{{- with .Values.elasticsearch.client.service }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .name }}
+  namespace: {{ $.Values.namespace }}
+spec:
+  selector:
+  {{- range $key, $value := .selector }}
+    {{ $key }}: {{ $value }}
+  {{- end}}
+  ports:
+  {{- range .ports }}
+  - name: {{.name}}
+    port: {{.port}}
+    targetPort: {{.targetPort}}
+    protocol: {{.protocol}}
+  {{- end}}
+  type: {{ .type }}
+{{- end }}
+---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: {{ .Values.elasticsearch.client.labels.app }}-{{ .Values.elasticsearch.client.labels.role }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: {{ .Values.elasticsearch.client.labels.app }}
+spec:
+  replicas: {{ .Values.elasticsearch.client.replcias }}
+  selector:
+    matchLabels:
+    {{- range $key, $value := .Values.elasticsearch.client.labels }}
+      {{ $key }}: {{ quote $value }}
+    {{- end}}
+  template:
+    metadata:
+      namespace: {{ .Values.namespace }}
+      annotations:
+      {{- range $key, $value := .Values.elasticsearch.common.annotations }}
+        {{ $key }}: {{ quote $value }}
+      {{- end}}
+      labels:
+        {{- range $key, $value := .Values.elasticsearch.client.labels }}
+          {{ $key }}: {{ quote $value }}
+        {{- end}}
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - elasticsearch
+                - key: role
+                  operator: In
+                  values:
+                  - data
+              topologyKey: kubernetes.io/hostname
+      containers:
+        - name: elasticsearch
+          image: {{ .Values.elasticsearch.common.image }}
+          resources:
+            requests:
+              {{- range $key, $value := .Values.elasticsearch.client.resources.requests }}
+                {{ $key }}: {{ quote $value }}
+              {{- end}}
+            limits:
+              {{- range $key, $value := .Values.elasticsearch.client.resources.limits }}
+                {{ $key }}: {{ quote $value }}
+              {{- end}}
+          ports:
+            {{- range .ports }}
+            - name: {{.name}}
+              containerPort: {{.containerPort}}
+            {{- end}}
+          env:
+            - name: cluster.name
+              value: {{ .Values.elasticsearch.common.cluster.name }}
+            - name: node.name
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: node.voting_only
+              value: "false"
+            - name: node.data
+              value: "false"
+            - name: node.ingest
+              value: "false"
+            - name: node.ml
+              value: "false"
+            - name: node.transform
+              value: "false"
+            - name: node.remote_cluster_client
+              value: "false"
+            - name: discovery.seed_hosts
+              value: {{ .Values.elasticsearch.master.service.name }}
+            - name: xpack.license.self_generated.type
+              value: basic
+            - name: xpack.monitoring.collection.enabled
+              value: 'true'
+            {{- if .Values.elasticsearch.common.enhanced_discovery_logging }}
+            - name: logger.org.elasticsearch.cluster.coordination.ClusterBootstrapService
+              value: trace
+            - name: logger.org.elasticsearch.discovery
+              value: trace
+            {{- end}}
+            - name: network.host
+              value: 0.0.0.0
+            - name: ES_JAVA_OPTS
+              value: {{ .Values.elasticsearch.client.java_opts }}

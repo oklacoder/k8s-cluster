@@ -1,0 +1,71 @@
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: elk-storage-01
+  namespace: elastic
+spec:
+  capacity:
+    storage: 40Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Delete
+  storageClassName: local
+  local:
+    path: /elk/master
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - hmkube001
+---
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: elk-storage-02
+  namespace: elastic
+spec:
+  capacity:
+    storage: 40Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Delete
+  storageClassName: local
+  local:
+    path: /elk/master
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - hmkube002
+---
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: elk-storage-03
+  namespace: elastic
+spec:
+  capacity:
+    storage: 40Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Delete
+  storageClassName: local
+  local:
+    path: /elk/master
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - hmkube003

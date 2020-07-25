@@ -1,0 +1,59 @@
+sudo visudo
+matt ALL=(ALL) NOPASSWD: ALL
+
+##sudo iptables -P FORWARD ACCEPT
+
+sudo nano /etc/sysctl.conf
+vm.max_map_count=262144
+
+##curl https://releases.rancher.com/install-docker/19.03.sh | sh
+
+---
+sudo reboot
+---
+
+sudo mkdir /elk
+sudo mkdir /elk/master
+
+sudo swapoff -a
+curl -sLS https://get.k3sup.dev | sh
+sudo install k3sup /usr/local/bin/
+
+
+#https://www.replex.io/blog/how-to-install-access-and-add-heapster-metrics-to-the-kubernetes-dashboard
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0/aio/deploy/recommended.yaml
+kubectl create serviceaccount dashboard-admin-sa
+kubectl create clusterrolebinding dashboard-admin-sa --clusterrole=cluster-admin --serviceaccount=default:dashboard-admin-sa
+
+ssh -L 8001:hmkube001:8001 matt@hmkube001
+http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/#/login
+
+export KUBECONFIG=`pwd`/kubeconfig
+kubectl proxy --address=0.0.0.0
+
+
+sudo lsblk -o UUID,NAME,FSTYPE,SIZE,MOUNTPOINT,LABEL,MODEL
+sudo apt update
+sudo apt install exfat-fuse
+sudo blkid
+sudo mkdir /mnt/data
+sudo mount /dev/sda1 /mnt/data
+
+sudo blkid
+#get partition UUID
+sudo nano /etc/fstab
+#add this line:
+```
+UUID=64A5-F009 /mnt/data exfat defaults,auto,users,rw,nofail 0 0
+```
+
+
+kubectl apply -f https://k8s.io/examples/admin/dns/dnsutils.yaml
+
+kubectl exec -i -t dnsutils -- nslookup kubernetes.default
+
+
+eyJhbGciOiJSUzI1NiIsImtpZCI6ImttejFBSFhycUlXTDhMSW9VMjlRUnE1NEhNSURjWkVwRWF0bDlPYzJWMTQifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJkZWZhdWx0Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZWNyZXQubmFtZSI6ImRhc2hib2FyZC1hZG1pbi1zYS10b2tlbi01NW5idiIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50Lm5hbWUiOiJkYXNoYm9hcmQtYWRtaW4tc2EiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC51aWQiOiJiYWFkZWNlOC0xMzcxLTRkNGQtYTM3NC03ODdjMzQyMjBlOTYiLCJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQ6ZGVmYXVsdDpkYXNoYm9hcmQtYWRtaW4tc2EifQ.uwavdXJM437Fhrnbjd51lkfHJeSuhe8vApSvkCHAupPDuj1-2uHcPHzKzsCdgN4GcnVcv--gVNm2bsdtXSeGPKwW6UFfxCMUIfhrexSDoSqqOoEMSJTvIXyPstPugdYuevQ0g9OTna5ciWpSpdkFYhMX3zPFDPlk17fmDsm251U0hVd2Pg_ItMBeAKF2i3GivUWggQ6Thp2I69v7t9AXW203j6YSOgqVxUfGa1qJfWTOzcei9WAGuJ7OOKrUFk7qjYoQPMDulcNXvJMqJ0Q-TrhB9mDVI1o2iq-pnR5Ay161EAYgyokCFYiYP9Fvydz4eQapDLFvoo9-b-fd6aBVKA
+
+[INFO]  Creating killall script /usr/local/bin/k3s-killall.sh
+[INFO]  Creating uninstall script /usr/local/bin/k3s-agent-uninstall.sh

@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: elasticsearch
+  namespace: elastic
+  annotations:
+    co.elastic.metrics/module: elasticsearch
+    co.elastic.metrics/metricsets: cluster_stats,node,node_stats,index,index_summary,shard
+    co.elastic.metrics/hosts: '${data.host}:9200'
+    # co.elastic.metrics/raw: "[{\"xpack.enabled\": true}]"
+    co.elastic.logs/module: 'elasticsearch'
+    co.elastic.logs/fileset.stdout: 'server'
+  labels:
+    app: elasticsearch
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: elasticsearch
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+        role: http
+    spec:
+      containers:
+        - name: elasticsearch
+          image: docker.elastic.co/elasticsearch/elasticsearch:7.8.0
+          ports:
+            - name: transport
+              containerPort: 9300
+            - name: http
+              containerPort: 9200
+          env:
+            - name: cluster.name
+              value: k8s-cluster
+            - name: node.name
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: node.data
+              value: "false"
+            - name: node.master
+              value: "false"            
+            - name: discovery.seed_hosts
+              value: elasticsearch-masters-discovery-headless
+            # - name: cluster.initial_master_nodes
+            #   value: elasticsearch-masters-discovery-headless
+            - name: cluster.initial_master_nodes
+              value: elasticsearch-masters-0,elasticsearch-masters-1,elasticsearch-masters-2
+            - name: xpack.license.self_generated.type
+              value: basic
+            - name: xpack.monitoring.collection.enabled
+              value: 'true'
+            # - name: logger.org.elasticsearch.cluster.coordination.ClusterBootstrapService
+            #   value: trace
+            # - name: logger.org.elasticsearch.discovery
+            #   value: trace
+            - name: network.host
+              value: 0.0.0.0
+            - name: ES_JAVA_OPTS
+              value: -Xms1g -Xmx1g

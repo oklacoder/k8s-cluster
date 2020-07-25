@@ -1,0 +1,175 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: filebeat-config
+  namespace: kube-system
+  labels:
+    k8s-app: filebeat
+data:
+  filebeat.yml: |-
+    name: '${NODE_NAME}-filebeat'
+
+    # To enable hints based autodiscover, remove `filebeat.inputs` configuration and uncomment this:
+    filebeat.autodiscover:
+      providers:
+        - type: kubernetes
+          host: ${NODE_NAME}
+          hints.enabled: true
+          include_annotations: '*'
+          hints.default_config:
+            type: container
+            paths:
+              - /var/log/containers/*-${data.kubernetes.container.id}.log
+
+    processors:
+      - add_host_metadata:
+      - drop_fields:
+          fields: ["host.name"]
+          ignore_missing: true
+      - copy_fields:
+          fields:
+            - from: agent.hostname
+              to: host.name
+          fail_on_error: false
+          ignore_missing: true
+
+    http.enabled: true
+    http.port: 9000
+    http.host: 0.0.0.0
+
+    # monitoring:
+    #   enabled: true
+    xpack.monitoring.enabled: true
+      
+    output.elasticsearch:
+      hosts: ['${ELASTICSEARCH_HOSTS:localhost:9200}']
+    setup.dashboards.enabled: true
+
+    setup.dashboards.retry.enabled: true
+    setup.dashboards.retry.interval: 30s
+    setup.dashboards.retry.maximum: 0
+    
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: filebeat
+  namespace: kube-system
+  annotations:
+  {{- range $key, $value := .Values.beats.common.annotations }}
+    {{ $key }}: {{ quote $value }}
+  {{- end}}
+  {{- range $key, $value := .Values.beats.filebeat.annotations }}
+    {{ $key }}: {{ quote $value }}
+  {{- end}}
+  labels:
+    k8s-app: filebeat
+spec:
+  selector:
+    matchLabels:
+      k8s-app: filebeat
+  template:
+    metadata:
+      labels:
+        k8s-app: filebeat
+    spec:
+      serviceAccountName: filebeat
+      terminationGracePeriodSeconds: 30
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+      - name: filebeat
+        image: docker.elastic.co/beats/filebeat:7.8.0
+        args: [
+          "-c", "/etc/filebeat.yml",
+          "-e",
+        ]
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        securityContext:
+          runAsUser: 0
+          # If using Red Hat OpenShift uncomment this:
+          #privileged: true
+        resources:
+          limits:
+            memory: 200Mi
+          requests:
+            cpu: 100m
+            memory: 100Mi
+        volumeMounts:
+        - name: config
+          mountPath: /etc/filebeat.yml
+          readOnly: true
+          subPath: filebeat.yml
+        - name: data
+          mountPath: /usr/share/filebeat/data
+        - name: varlibdockercontainers
+          mountPath: /var/lib/docker/containers
+          readOnly: true
+        - name: varlog
+          mountPath: /var/log
+          readOnly: true
+        - name: dockersock
+          mountPath: "/var/run/docker.sock"
+      volumes:
+      - name: dockersock
+        hostPath:
+          # path: /var/run/docker.sock  
+          path: /run/k3s/containerd/containerd.sock
+      - name: config
+        configMap:
+          defaultMode: 0600
+          name: filebeat-config
+      - name: varlibdockercontainers
+        hostPath:
+          path: /var/lib/docker/containers
+      - name: varlog
+        hostPath:
+          path: /var/log
+      # data folder stores a registry of read status for all files, so we don't send everything again on a Filebeat pod restart
+      - name: data
+        hostPath:
+          path: /var/lib/filebeat-data
+          type: DirectoryOrCreate
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: filebeat
+subjects:
+- kind: ServiceAccount
+  name: filebeat
+  namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: filebeat
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: filebeat
+  labels:
+    k8s-app: filebeat
+rules:
+- apiGroups: [""] # "" indicates the core API group
+  resources:
+  - namespaces
+  - pods
+  verbs:
+  - get
+  - watch
+  - list
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: filebeat
+  namespace: kube-system
+  labels:
+    k8s-app: filebeat
+---

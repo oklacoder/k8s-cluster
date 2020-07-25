@@ -1,0 +1,17 @@
+beats:
+  common:
+    annotations:
+      co.elastic.metrics/module: beat
+      co.elastic.metrics/metricsets: state,stats
+      co.elastic.metrics/processors.1.drop_fields.fields: host.name
+      co.elastic.metrics/processors.1.drop_fields.ignore_missing: "true"
+      co.elastic.metrics/processors.2.copy_fields.fields.from: agent.hostname
+      co.elastic.metrics/processors.2.copy_fields.fields.to: host.name
+      co.elastic.metrics/processors.2.copy_fields.fail_on_missing: "false"
+      co.elastic.metrics/processors.2.copy_fields.ignore_missing: "true"
+  filebeat:
+    annotations:      
+      co.elastic.metrics/hosts: ${data.host}:9000
+  metricbeat:
+    annotations:      
+      co.elastic.metrics/hosts: ${data.host}:9001

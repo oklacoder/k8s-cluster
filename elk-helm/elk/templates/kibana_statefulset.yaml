@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.kibana.service.name }}
+  namespace: {{ .Values.namespace }}
+spec:
+  selector:
+  {{- range $key, $value := .Values.kibana.service.selector }}
+    {{ $key }}: {{ quote $value }}
+  {{- end}}
+  ports:
+  - name: http
+    port: {{ .Values.kibana.service.port }}
+    targetPort: 5601
+  type: LoadBalancer
+---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: kibana
+  namespace: elastic
+  labels:
+    app: elasticsearch
+    role: kibana
+spec:
+  replicas: {{ .Values.kibana.replicas }}
+  selector:
+    matchLabels:  
+    {{- range $key, $value := .Values.kibana.labels }}
+      {{ $key }}: {{ quote $value }}
+    {{- end}}
+  template:
+    metadata:
+      annotations:
+      {{- range $key, $value := .Values.kibana.annotations }}
+        {{ $key }}: {{ quote $value }}
+      {{- end}}
+      labels:
+      {{- range $key, $value := .Values.kibana.labels }}
+        {{ $key }}: {{ quote $value }}
+      {{- end}}
+    spec:
+      containers:
+        - name: {{ .Values.kibana.name }}
+          image: {{ .Values.kibana.image }}
+          ports:
+          {{- range .Values.kibana.ports }}
+          - name: {{.name}}
+            containerPort: {{.containerPort}}
+          {{- end}}
+          env:
+            - name: SERVER_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name           
+            - name: ELASTICSEARCH_HOSTS
+              value: http://{{ .Values.elasticsearch.client.service.name }}:9200
+            - name: ELASTICSEARCH_STARTUPTIMEOUT
+              value: '45000'
+            - name: ELASTICSEARCH_PRESERVE_HOST
+              value: 'true'
+            - name: XPACK_MONITORING_KIBANA_COLLECTION_ENABLED
+              value: 'true'
+            - name: SERVER_HOST
+              value: 0.0.0.0
+            - name: LOGGING_VERBOSE
+              value: 'true'

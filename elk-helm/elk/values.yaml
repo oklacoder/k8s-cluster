@@ -1,0 +1,156 @@
+namespace: elastic
+
+persist: true
+
+persistent_volumes:
+  - name: elk-storage-01
+    size: 40Gi
+    path: "/elk/master"
+    host: hmkube001
+  - name: elk-storage-02
+    size: 40Gi
+    path: "/elk/master"
+    host: hmkube002
+  - name: elk-storage-03
+    size: 40Gi
+    path: /elk/master
+    host: hmkube003
+
+elasticsearch:
+  common:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.8.0
+    name: elasticsearch
+    cluster:
+      name: k8s-cluster
+    annotations:
+      co.elastic.metrics/module: elasticsearch
+      co.elastic.metrics/metricsets: cluster_stats,node,node_stats,index,index_summary,shard
+      co.elastic.metrics/hosts: '${data.host}:9200'        
+      co.elastic.metrics/processors.1.drop_fields.fields: host.name
+      co.elastic.metrics/processors.1.drop_fields.ignore_missing: "true"
+      co.elastic.metrics/processors.2.copy_fields.fields.from: agent.hostname
+      co.elastic.metrics/processors.2.copy_fields.fields.to: host.name
+      co.elastic.metrics/processors.2.copy_fields.fail_on_missing: "false"
+      co.elastic.metrics/processors.2.copy_fields.ignore_missing: "true"
+      co.elastic.logs/module: 'elasticsearch'
+      co.elastic.logs/fileset.stdout: 'server'
+      co.elastic.logs/processors.1.drop_fields.fields: host.name
+      co.elastic.logs/processors.1.drop_fields.ignore_missing: "true"
+      co.elastic.logs/processors.2.copy_fields.fields.from: agent.hostname
+      co.elastic.logs/processors.2.copy_fields.fields.to: host.name
+      co.elastic.logs/processors.2.copy_fields.fail_on_missing: "false"
+      co.elastic.logs/processors.2.copy_fields.ignore_missing: "true"
+    ports:
+      - name: http
+        containerPort: 9200
+      - name: transport
+        containerPort: 9300
+    enhanced_discovery_logging: false
+  master:
+    replicas: 3
+    static:
+      name: elasticsearch-static-master
+    service:
+      name: elasticsearch-master-headless
+      ports:
+      - name: transport
+        protocol: TCP
+        port: 9300
+        targetPort: 9300
+      - name: http
+        protocol: TCP
+        port: 9200
+        targetPort: 9200
+      selectors:
+        app: elasticsearch
+        role: master
+    labels:
+      app: elasticsearch
+      role: master
+    java_opts: -Xms1g -Xmx1g
+    resources:
+      requests:
+        memory: 2Gi
+  client:
+    replicas: 2
+    service:
+      name: elasticsearch-client-service
+      selector:
+        app: elasticsearch
+        role: client
+      ports:
+      - name: http
+        port: 9200
+        targetPort: 9200
+      - name: transport
+        port: 9300
+        targetPort: 9300
+      type: LoadBalancer
+    labels:
+      app: elasticsearch
+      role: client
+    java_opts: -Xms2g -Xmx2g
+    resources:
+      requests:
+        memory: 4Gi
+  data:
+    replicas: 3
+    service:
+      name: elasticsearch-data-headless
+      ports:
+      - name: transport
+        protocol: TCP
+        port: 9300
+        targetPort: 9300
+      - name: http
+        protocol: TCP
+        port: 9200
+        targetPort: 9200
+      selectors:
+        app: elasticsearch
+        role: data
+    labels:
+      app: elasticsearch
+      role: data
+    storage:
+      size: 30Gi
+      class: longhorn
+    java_opts: -Xms3g -Xmx3g
+    resources:
+      requests:
+        memory: 5Gi ##oom errors preventing bootstrap
+
+kibana:
+  replicas: 1
+  service:
+    name: kibana-service
+    port: 5601
+    selector:
+      app: elasticsearch
+      role: kibana
+  name: kibana
+  image: docker.elastic.co/kibana/kibana:7.8.0
+  ports:
+    - name: http
+      containerPort: 5601
+  labels:
+    app: elasticsearch
+    role: kibana
+  annotations:
+    co.elastic.metrics/module: kibana
+    co.elastic.metrics/metricsets: status,stats
+    co.elastic.metrics/hosts: '${data.host}:5601'
+    co.elastic.metrics/processors.1.drop_fields.fields: host.name
+    co.elastic.metrics/processors.1.drop_fields.ignore_missing: "true"
+    co.elastic.metrics/processors.2.copy_fields.fields.from: agent.hostname
+    co.elastic.metrics/processors.2.copy_fields.fields.to: host.name
+    co.elastic.metrics/processors.2.copy_fields.fail_on_missing: "false"
+    co.elastic.metrics/processors.2.copy_fields.ignore_missing: "true"
+    co.elastic.logs/module: kibana
+    co.elastic.logs/fileset.stdout: log
+    co.elastic.logs/processors.1.drop_fields.fields: host.name
+    co.elastic.logs/processors.1.drop_fields.ignore_missing: "true"
+    co.elastic.logs/processors.2.copy_fields.fields.from: agent.hostname
+    co.elastic.logs/processors.2.copy_fields.fields.to: host.name
+    co.elastic.logs/processors.2.copy_fields.fail_on_missing: "false"
+    co.elastic.logs/processors.2.copy_fields.ignore_missing: "true"

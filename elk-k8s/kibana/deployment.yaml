@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kibana
+  namespace: elastic
+  labels:
+    app: elasticsearch
+    role: kibana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: elasticsearch
+  template:
+    metadata:
+      annotations:
+        co.elastic.metrics/module: kibana
+        co.elastic.metrics/metricsets: status,stats
+        co.elastic.metrics/hosts: '${data.host}:5601'
+        # co.elastic.metrics/raw: "[{\"xpack.enabled\": true}]"
+        co.elastic.logs/module: kibana
+        co.elastic.logs/fileset.stdout: log
+      labels:
+        app: elasticsearch
+        role: kibana
+    spec:
+      containers:
+        - name: kibana
+          image: docker.elastic.co/kibana/kibana:7.8.0
+          ports:
+            - name: http
+              containerPort: 5601
+          env:
+            - name: SERVER_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name           
+            # - name: ELASTICSEARCH_HOSTS
+            #   value: http://hmkube001:9200
+            - name: ELASTICSEARCH_HOSTS
+              value: http://elasticsearch-loadbalancer:9200
+            - name: ELASTICSEARCH_PRESERVE_HOST
+              value: 'true'
+            # - name: cluster.initial_master_nodes
+            #   value: elasticsearch-masters-discovery-headless
+            # - name: cluster.initial_master_nodes
+            #   value: elasticsearch-masters-0,elasticsearch-masters-1,elasticsearch-masters-2
+            # - name: xpack.license.self_generated.type
+            #   value: basic
+            - name: XPACK_MONITORING_KIBANA_COLLECTION_ENABLED
+              value: 'true'
+            # - name: logger.org.elasticsearch.cluster.coordination.ClusterBootstrapService
+            #   value: trace
+            # - name: logger.org.elasticsearch.discovery
+            #   value: trace
+            - name: SERVER_HOST
+              value: 0.0.0.0
+            # - name: LOGGING_DEST
+            #   value: /var/log/kibana/logs.json
+            # - name: LOGGING_JSON
+            #   value: 'true'
