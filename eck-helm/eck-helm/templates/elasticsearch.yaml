@@ -1,0 +1,171 @@
+{{- with .Values.elastic }}
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
+  name: {{ $.Values.cluster.name }}-discovery
+  namespace: {{ $.Values.namespace }}
+spec:
+  clusterIP: None
+  ports:
+  # - port: 9300
+  #   protocol: TCP
+  #   targetPort: 9300
+  #   name: transport
+  - port: 9200
+    protocol: TCP
+    targetPort: 9200
+    name: http
+  publishNotReadyAddresses: true
+  selector:
+    # component: elasticsearch
+    app: elasticsearch
+    role: master
+  sessionAffinity: None
+  type: ClusterIP
+
+---
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
+metadata:
+  name: {{ $.Values.cluster.name }}
+  namespace: {{ $.Values.namespace }}
+spec:
+  version: {{ .version }}
+  http:
+    tls:
+      selfSignedCertificate: 
+        disabled: true
+  nodeSets:
+  {{- with .master }}
+  - name: master
+    count: {{.count}}
+    config:
+      node.master: true
+      node.data: false
+      node.ingest: false
+      node.ml: false
+      xpack.monitoring.collection.enabled: true
+    podTemplate:
+      metadata:
+        annotations:
+        {{- range $key, $value := $.Values.elastic.annotations }}
+          {{ $key }}: {{ quote $value }}
+        {{- end}}
+        labels:
+          app: elasticsearch
+          role: master
+      spec:
+        containers:
+        - name: elasticsearch
+          env:
+          {{- range $key, $value := .env }}
+          - name: {{$key}}
+            value: {{$value}}
+          {{- end }}
+          resources:
+          {{- with .resources }}
+            requests:
+            {{- range $key, $value := .requests }}
+              {{ $key }}: {{ quote $value }}
+            {{- end}}
+            limits:
+            {{- range $key, $value := .limits }}
+              {{ $key }}: {{ quote $value }}
+            {{- end}}
+          {{- end }}
+        volumes:
+        - name: elasticsearch-data
+          emptyDir: {}    
+  {{- end }}
+  {{- with .client}}
+  - name: client
+    count: {{.count}}
+    config:
+      node.master: false
+      node.data: false
+      node.ingest: true
+      node.ml: false
+      xpack.monitoring.collection.enabled: true
+    podTemplate:
+      metadata:
+        annotations:
+        {{- range $key, $value := $.Values.elastic.annotations }}
+          {{ $key }}: {{ quote $value }}
+        {{- end}}
+        labels:
+          app: elasticsearch
+          role: client
+      spec:
+        containers:
+        - name: elasticsearch
+          env:
+          {{- range $key, $value := .env }}
+          - name: {{$key}}
+            value: {{$value}}
+          {{- end }}
+          resources:
+          {{- with .resources }}
+            requests:
+            {{- range $key, $value := .requests }}
+              {{ $key }}: {{ quote $value }}
+            {{- end}}
+            limits:
+            {{- range $key, $value := .limits }}
+              {{ $key }}: {{ quote $value }}
+            {{- end}}
+          {{- end }}
+        volumes:
+        - name: elasticsearch-data
+          emptyDir: {}
+  {{- end }}
+  {{- with .data }}
+  - name: data
+    count: {{.count}}
+    config:
+      node.master: false
+      node.data: true
+      node.ingest: false
+      node.ml: false
+      xpack.monitoring.collection.enabled: true
+    podTemplate:
+      metadata:
+        annotations:
+        {{- range $key, $value := $.Values.elastic.annotations }}
+          {{ $key }}: {{ quote $value }}
+        {{- end}}
+        labels:
+          app: elasticsearch
+          role: data
+      spec:
+        containers:
+        - name: elasticsearch
+          env:
+          {{- range $key, $value := .env }}
+          - name: {{$key}}
+            value: {{$value}}
+          {{- end }}
+          resources:
+          {{- with .resources }}
+            requests:
+            {{- range $key, $value := .requests }}
+              {{ $key }}: {{ quote $value }}
+            {{- end}}
+            limits:
+            {{- range $key, $value := .limits }}
+              {{ $key }}: {{ quote $value }}
+            {{- end}}
+          {{- end }}
+    volumeClaimTemplates:
+    - metadata:
+        name: elasticsearch-data
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: {{ .storage.capacity }}
+        storageClassName: {{ .storage.class }}
+  {{- end }}  
+{{- end }}

@@ -1,0 +1,23 @@
+apiVersion: kibana.k8s.elastic.co/v1
+kind: Kibana
+metadata:
+  name: {{ $.Values.cluster.name }}
+  namespace: {{ $.Values.namespace }}
+spec:
+  version: 7.8.0
+  http:
+    tls:
+      selfSignedCertificate: 
+        disabled: true
+  count: 1
+  elasticsearchRef:
+    name: {{ $.Values.cluster.name }}
+  config:
+    monitoring.kibana.collection.enabled: true
+  podTemplate:
+    metadata:
+      annotations:
+      {{- range $key, $value := .Values.kibana.annotations }}
+        {{ $key }}: {{ quote $value }}
+      {{- end}}
+        

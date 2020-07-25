@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: hmelas-es-elastic-user
+  namespace: {{ .Values.namespace }}
+type: Opaque
+data:
+  username: {{ .Values.sa.username | b64enc }}
+  password: {{ .Values.sa.password | b64enc }}
+  elastic: {{ .Values.sa.password | b64enc }}
+
+#https://github.com/elastic/cloud-on-k8s/pull/2682

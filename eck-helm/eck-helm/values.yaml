@@ -1,0 +1,72 @@
+namespace: default
+cluster: 
+  name: hmelas
+sa:
+  username: elastic
+  password: elastic
+
+kibana:
+  annotations:
+    co.elastic.metrics/module: kibana
+    co.elastic.metrics/metricsets: status,stats
+    co.elastic.metrics/hosts: '${data.host}:5601'
+    co.elastic.metrics/username: elastic #{{ .Values.sa.username }}
+    co.elastic.metrics/password: elastic #{{ .Values.sa.password }}
+    co.elastic.logs/module: kibana
+    co.elastic.logs/fileset.stdout: log
+
+elastic:
+  version: 7.8.0
+  annotations:
+    co.elastic.metrics/module: elasticsearch
+    co.elastic.metrics/metricsets: cluster_stats,node,node_stats,index,index_summary,shard
+    co.elastic.metrics/hosts: '${data.host}:9200'
+    co.elastic.metrics/username: elastic #{{ .Values.sa.username }}
+    co.elastic.metrics/password: elastic #{{ .Values.sa.password }}
+    co.elastic.logs/module: elasticsearch
+    co.elastic.logs/fileset.stdout: server
+  master:
+    count: 3
+    name: elasticsearch
+    env:
+      ES_JAVA_OPTS: -Xms1g -Xmx1g
+    resources:
+      requests:
+        memory: 2Gi
+      limits:
+  client:
+    count: 2
+    name: elasticsearch
+    env:
+      ES_JAVA_OPTS: -Xms2g -Xmx2g
+    resources:
+      requests:
+        memory: 4Gi
+      limits:
+  data:
+    count: 3
+    name: elasticsearch
+    storage: 
+      capacity: 15Gi
+      class: longhorn
+    env:
+      ES_JAVA_OPTS: -Xms3g -Xmx3g
+    resources:
+      requests:
+        memory: 5Gi
+      limits:
+
+beats:
+  namespace: default
+  common:
+    annotations:
+      co.elastic.metrics/module: beat
+      co.elastic.metrics/metricsets: state,stats
+      co.elastic.metrics/username: elastic #{{ .Values.sa.username }}
+      co.elastic.metrics/password: elastic #{{ .Values.sa.password }}
+  filebeat:
+    annotations:      
+      co.elastic.metrics/hosts: ${data.host}:9000
+  metricbeat:
+    annotations:      
+      co.elastic.metrics/hosts: ${data.host}:9001

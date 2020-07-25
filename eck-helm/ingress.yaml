@@ -1,0 +1,28 @@
+# apiVersion: networking.k8s.io/v1beta1
+# kind: Ingress
+# metadata:
+#   name: kibana-ingress
+#   namespace: default
+# spec:
+#   backend:
+#     serviceName: quickstart-kb-http
+#     servicePort: 5601
+
+---
+
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: longhorn-ingress
+  namespace: longhorn-system
+  annotations:
+    traefik.ingress.kubernetes.io/rule-type: PathPrefix
+spec:
+  rules:
+  - host: longhorn.okstovall.com
+    http:
+      paths: 
+      - path: /
+        backend:
+          serviceName: longhorn-frontend
+          servicePort: 80
