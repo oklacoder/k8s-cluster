@@ -12,12 +12,12 @@ spec:
       paths:
       - path: /
         backend:
-          serviceName: hmelas-es-http
+          serviceName: {{.Values.cluster.name}}-es-http
           servicePort: 9200
   - host: kibana.okstovall.com
     http:
       paths:
       - path: /
         backend:
-          serviceName: hmelas-kb-http
+          serviceName: {{.Values.cluster.name}}-kb-http
           servicePort: 5601

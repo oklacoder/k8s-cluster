@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: hmelas-es-elastic-user
+  name: {{ .Values.cluster.name }}-es-elastic-user
   namespace: {{ .Values.namespace }}
 type: Opaque
 data:

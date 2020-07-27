@@ -66,3 +66,6 @@ kubectl -n kube-system get svc -l k8s-app=kube-dns
 kubectl run -it --rm --restart=Never busybox --image=busybox:1.28 -- nslookup kubernetes.default
 kubectl run -it --rm --restart=Never busybox --image=busybox:1.28 -- nslookup hmelas-es-http.default.svc
 export DOMAIN=hmelas-es-http.default.svc; echo "=> Start DNS resolve test"; kubectl get pods -l name=dnstest --no-headers -o custom-columns=NAME:.metadata.name,HOSTIP:.status.hostIP | while read pod host; do kubectl exec $pod -- /bin/sh -c "nslookup $DOMAIN > /dev/null 2>&1"; RC=$?; if [ $RC -ne 0 ]; then echo $host cannot resolve $DOMAIN; fi; done; echo "=> End DNS resolve test"
+
+
+esrally --track=nested --target-hosts=elastic.okstovall.com:9200 --pipeline=benchmark-only --client-options="basic_auth_user:'elastic',basic_auth_password:'elastic'"

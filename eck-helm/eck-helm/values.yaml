@@ -1,6 +1,6 @@
 namespace: default
 cluster: 
-  name: hmelas
+  name: elastic
 sa:
   username: elastic
   password: elastic
@@ -25,36 +25,64 @@ elastic:
     co.elastic.metrics/password: elastic #{{ .Values.sa.password }}
     co.elastic.logs/module: elasticsearch
     co.elastic.logs/fileset.stdout: server
-  master:
-    count: 3
-    name: elasticsearch
-    env:
-      ES_JAVA_OPTS: -Xms1g -Xmx1g
-    resources:
-      requests:
-        memory: 2Gi
-      limits:
-  client:
-    count: 2
-    name: elasticsearch
-    env:
-      ES_JAVA_OPTS: -Xms2g -Xmx2g
-    resources:
-      requests:
-        memory: 4Gi
-      limits:
-  data:
-    count: 3
-    name: elasticsearch
-    storage: 
-      capacity: 15Gi
-      class: longhorn
-    env:
-      ES_JAVA_OPTS: -Xms3g -Xmx3g
-    resources:
-      requests:
-        memory: 5Gi
-      limits:
+  nodes:
+    master:
+      count: 3
+      name: elasticsearch
+      labels:
+        app: elasticsearch
+        role: master
+      node:
+        master: true
+        ingest: false
+        data: false
+        ml: false
+      env:
+        ES_JAVA_OPTS: -Xms1g -Xmx1g
+      resources:
+        requests:
+          memory: 2Gi
+        limits:
+          memory: 2Gi
+    client:
+      count: 2
+      name: elasticsearch
+      labels:
+        app: elasticsearch
+        role: client
+      node:
+        master: false
+        ingest: true
+        data: false
+        ml: false
+      env:
+        ES_JAVA_OPTS: -Xms2g -Xmx2g
+      resources:
+        requests:
+          memory: 3Gi
+        limits:
+          memory: 3Gi
+    data:
+      count: 3
+      name: elasticsearch
+      labels:
+        app: elasticsearch
+        role: data
+      node:
+        master: false
+        ingest: false
+        data: true
+        ml: false
+      storage: 
+        capacity: 15Gi
+        class: longhorn
+      env:
+        ES_JAVA_OPTS: -Xms3g -Xmx3g
+      resources:
+        requests:
+          memory: 4Gi
+        limits:
+          memory: 5Gi
 
 beats:
   namespace: default
