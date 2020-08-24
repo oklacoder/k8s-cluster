@@ -1,0 +1,35 @@
+apiVersion: apm.k8s.elastic.co/v1
+kind: ApmServer
+metadata:
+  name: {{.Values.cluster.name}}
+  namespace: {{.Values.namespace}}
+spec:
+  version: {{.Values.apm.version}}
+  count: {{.Values.apm.count}}
+  http:
+    tls:
+      selfSignedCertificate: 
+        disabled: true
+  # elasticsearchRef:
+  #   name: {{ .Values.cluster.name }}
+  #   namespace: {{ .Values.namespace }}
+  # kibanaRef:
+  #   name: {{ .Values.cluster.name }}
+  #   namespace: {{ .Values.namespace }}
+  config:
+    monitoring:
+      enabled: true
+    output:
+      elasticsearch:
+        hosts: [ "{{ .Values.cluster.name }}-es-client.{{ .Values.namespace }}.svc:9200" ]
+        username: {{.Values.sa.username}}
+        password: {{.Values.sa.password}}
+    apm-server:
+      kibana:
+        enabled: true
+        host: "{{.Values.cluster.name}}-kb-http:5601" #elastic-kb-http
+        username: {{.Values.sa.username}}
+        password: {{.Values.sa.password}}
+      rum:
+        enabled: true
+        

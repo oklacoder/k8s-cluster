@@ -5,19 +5,27 @@ metadata:
   namespace: {{ .Values.namespace }}
   annotations:
     traefik.ingress.kubernetes.io/rule-type: PathPrefix
+    cert-manager.io/cluster-issuer: "letsencrypt-staging" # Encrypt using the ClusterIssuer deployed while setting up Cert-Manager
 spec:
   rules:
-  - host: elastic.okstovall.com
+  - host: {{$.Values.hosts.elastic}}
     http:
       paths:
       - path: /
         backend:
           serviceName: {{.Values.cluster.name}}-es-http
           servicePort: 9200
-  - host: kibana.okstovall.com
+  - host: {{$.Values.hosts.kibana}}
     http:
       paths:
       - path: /
         backend:
           serviceName: {{.Values.cluster.name}}-kb-http
           servicePort: 5601
+  - host: {{$.Values.hosts.apm}}
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: {{.Values.cluster.name}}-apm-http
+          servicePort: 8200

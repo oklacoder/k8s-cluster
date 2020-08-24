@@ -1,9 +1,15 @@
 namespace: default
 cluster: 
   name: elastic
+  version: 7.9.0
 sa:
   username: elastic
   password: elastic
+
+hosts:
+  elastic: elastic.okstovall.com
+  kibana: kibana.okstovall.com
+  apm: apm.okstovall.com
 
 kibana:
   annotations:
@@ -16,7 +22,6 @@ kibana:
     co.elastic.logs/fileset.stdout: log
 
 elastic:
-  version: 7.8.0
   annotations:
     co.elastic.metrics/module: elasticsearch
     co.elastic.metrics/metricsets: cluster_stats,node,node_stats,index,index_summary,shard
@@ -74,7 +79,7 @@ elastic:
         data: true
         ml: false
       storage: 
-        capacity: 15Gi
+        capacity: 50Gi
         class: longhorn
       env:
         ES_JAVA_OPTS: -Xms3g -Xmx3g
@@ -98,3 +103,7 @@ beats:
   metricbeat:
     annotations:      
       co.elastic.metrics/hosts: ${data.host}:9001
+
+apm: 
+  version: 7.8.0
+  count: 1

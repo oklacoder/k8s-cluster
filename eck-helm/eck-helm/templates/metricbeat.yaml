@@ -4,7 +4,7 @@ metadata:
   name: metricbeat
 spec:
   type: metricbeat
-  version: 7.8.0
+  version: {{ $.Values.cluster.version }}
   elasticsearchRef:
     name: {{ .Values.cluster.name }}
     namespace: {{ .Values.namespace }}

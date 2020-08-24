@@ -32,7 +32,7 @@ metadata:
   name: {{ $.Values.cluster.name }}
   namespace: {{ $.Values.namespace }}
 spec:
-  version: {{ .version }}
+  version: {{ $.Values.cluster.version }}
   http:
     tls:
       selfSignedCertificate: 
