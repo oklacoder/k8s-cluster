@@ -35,8 +35,17 @@ spec:
   version: {{ $.Values.cluster.version }}
   http:
     tls:
-      selfSignedCertificate: 
-        disabled: true
+      certificate:
+        secretName: {{$.Values.cluster.name}}-es-cert
+  # http:
+  #   tls:
+  #     selfSignedCertificate:
+  #       subjectAltNames:
+  #       - dns: elastic.okstovall.com
+  # http:
+  #   tls:
+  #     selfSignedCertificate: 
+  #       disabled: true
   nodeSets:
   {{- range $key, $value := .nodes }}
   {{- with $value}}

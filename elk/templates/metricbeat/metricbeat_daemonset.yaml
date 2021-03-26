@@ -1,0 +1,113 @@
+{{- with $.Values.metricbeat}}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{.name}}
+  namespace: {{ $.Values.cluster.namespace }}
+  labels:
+    k8s-app: metricbeat
+    app: elasticsearch
+    role: metricbeat
+spec:
+  selector:
+    matchLabels:
+      k8s-app: metricbeat
+      app: elasticsearch
+      role: metricbeat
+  template:
+    metadata:
+      annotations:  
+        co.elastic.metrics/module: beat
+        co.elastic.metrics/metricsets: state,stats
+        co.elastic.metrics/username: {{ $.Values.sa.username }}
+        co.elastic.metrics/password: {{ $.Values.sa.password }}
+        
+
+
+        # co.elastic.monitor/type: "http"
+        # co.elastic.monitor/id: ${pod.name}
+        # co.elastic.monitor/name: {{ .name }}
+        # co.elastic.monitor/schedule: "@every 5s"
+        # co.elastic.monitor/hosts: "http://${data.host}:9001/state"
+        # co.elastic.monitor/check.response.status: "200"
+      labels:
+        k8s-app: metricbeat
+        app: elasticsearch
+        role: metricbeat
+    spec:
+      serviceAccountName: metricbeat
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+      - name: metricbeat
+        image: {{ .image }}:{{ $.Values.cluster.version }}
+        args: [
+          "-c", "/etc/metricbeat.yml",
+          "-e",
+          "-system.hostfs=/hostfs",
+        ]
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        securityContext:
+          runAsUser: 0
+          # If using Red Hat OpenShift uncomment this:
+          #privileged: true
+        resources:
+          limits:
+            memory: 200Mi
+          requests:
+            cpu: 100m
+            memory: 100Mi
+        volumeMounts:
+        - name: cert
+          mountPath: /etc/pki/client/
+          readOnly: true
+        - name: config
+          mountPath: /etc/metricbeat.yml
+          readOnly: true
+          subPath: metricbeat.yml
+        - name: data
+          mountPath: /usr/share/metricbeat/data
+        - name: modules
+          mountPath: /usr/share/metricbeat/modules.d
+          readOnly: true
+        - name: dockersock
+          mountPath: /var/run/docker.sock
+        - name: proc
+          mountPath: /hostfs/proc
+          readOnly: true
+        - name: cgroup
+          mountPath: /hostfs/sys/fs/cgroup
+          readOnly: true
+      volumes:
+      - name: cert
+        secret:
+          secretName: elasticsearch-cert
+      - name: proc
+        hostPath:
+          path: /proc
+      - name: cgroup
+        hostPath:
+          path: /sys/fs/cgroup
+      - name: dockersock
+        hostPath:
+          path: /var/run/docker.sock
+      - name: config
+        configMap:
+          defaultMode: 0640
+          name: metricbeat-daemonset-config
+      - name: modules
+        configMap:
+          defaultMode: 0640
+          name: metricbeat-daemonset-modules
+      - name: data
+        hostPath:
+          # When metricbeat runs as non-root user, this directory needs to be writable by group (g+w)
+          path: /var/lib/metricbeat-data
+          type: DirectoryOrCreate          
+---
+{{- end }}

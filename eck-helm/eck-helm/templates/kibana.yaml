@@ -7,8 +7,17 @@ spec:
   version: {{ $.Values.cluster.version }}
   http:
     tls:
-      selfSignedCertificate: 
-        disabled: true
+      certificate:
+        secretName: {{$.Values.cluster.name}}-es-cert
+  # http:
+  #   tls:
+  #     selfSignedCertificate:
+  #       subjectAltNames:
+  #       - dns: kibana.okstovall.com
+  # http:
+  #   tls:
+  #     selfSignedCertificate: 
+  #       disabled: true
   count: 1
   elasticsearchRef:
     name: {{ $.Values.cluster.name }}

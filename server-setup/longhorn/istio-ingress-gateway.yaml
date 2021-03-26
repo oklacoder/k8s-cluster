@@ -1,0 +1,74 @@
+# apiVersion: networking.istio.io/v1alpha3
+# kind: Gateway
+# metadata:
+#   name: longhorn-gateway
+#   namespace: longhorn-system
+# spec:
+#   selector:
+#     istio: ingressgateway # use istio default ingress gateway
+#   servers:
+#   - port:
+#       number: 443
+#       name: https
+#       protocol: HTTPS
+#     tls:
+#       mode: PASSTHROUGH
+#     hosts:
+#     - longhorn.okstovall.com
+# ---
+# apiVersion: networking.istio.io/v1alpha3
+# kind: VirtualService
+# metadata:
+#   name: nginx
+#   namespace: longhorn-system
+# spec:
+#   hosts:
+#   - longhorn.okstovall.com
+#   gateways:
+#   - longhorn-gateway
+#   tls:
+#   - match:
+#     - port: 443
+#       sniHosts:
+#       - longhorn.okstovall.com
+#     route:
+#     - destination:
+#         host: longhorn-frontend
+#         port:
+#           number: 80
+
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: longhorn-gateway
+spec:
+  selector:
+    istio: ingressgateway # use Istio default gateway implementation
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "longhorn.okstovall.com"
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: longhorn
+spec:
+  hosts:
+  - "longhorn.okstovall.com"
+  gateways:
+  - longhorn-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /
+    - uri:
+        prefix: /dashboard
+    route:
+    - destination:
+        host: longhorn-frontend.longhorn-system.svc.cluster.local
+        port:
+          number: 80

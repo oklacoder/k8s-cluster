@@ -44,7 +44,7 @@ repeat on each node:
 > remove every line that contain the word "swap"
 
 ### increase virtual memory for Elastic
-repeat on each nod:
+repeat on each node:
 >
 > `sudo nano /etc/sysctl.conf`
 >

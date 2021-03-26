@@ -1,0 +1,52 @@
+{{- with $.Values.metricbeat}}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: metricbeat-daemonset-config
+  namespace: default
+  labels:
+    k8s-app: metricbeat
+data:
+  metricbeat.yml: |-
+    metricbeat.config.modules:
+      # Mounted `metricbeat-daemonset-modules` configmap:
+      path: ${path.config}/modules.d/*.yml
+      # Reload module configs as they change:
+      reload.enabled: false
+
+    # To enable hints based autodiscover uncomment this:
+    metricbeat.autodiscover:
+     providers:
+       - type: kubernetes
+         node: ${NODE_NAME}
+         hints.enabled: true
+
+    processors:
+      - add_cloud_metadata:
+
+    http.enabled: true
+    http.host: 0.0.0.0
+    http.port: 9001
+    monitoring:
+      enabled: true
+
+    setup:
+      kibana:
+        host: https://{{ $.Values.kibana.services.http.name }}.{{ $.Values.cluster.namespace }}.svc.cluster.local:5601
+        username: {{ $.Values.sa.username }}
+        password: {{ $.Values.sa.password }}
+        ssl.enabled: true
+        ssl.certificate_authorities: ["/etc/pki/client/ca.crt"]
+        ssl.certificate: "/etc/pki/client/tls.crt"
+        ssl.key: "/etc/pki/client/tls.key"    
+
+    output.elasticsearch:
+      hosts: ['https://{{ $.Values.elasticsearch.services.http.name }}.{{ $.Values.cluster.namespace }}.svc.cluster.local:9200']
+      username: {{ $.Values.sa.username }}
+      password: {{ $.Values.sa.password }}
+      ssl.certificate_authorities: ["/etc/pki/client/ca.crt"]
+      ssl.certificate: "/etc/pki/client/tls.crt"
+      ssl.key: "/etc/pki/client/tls.key"  
+      
+{{- end }}

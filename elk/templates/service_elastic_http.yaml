@@ -1,0 +1,22 @@
+{{- with $.Values.elasticsearch.services.http }}
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
+  name: {{ .name }}
+  namespace: {{$.Values.cluster.namespace}}
+spec:
+  ports:
+  {{- range .ports }}
+  - name: {{.name}}
+    protocol: {{.protocol}}
+    port: {{.port}}
+    targetPort: {{.targetPort}}
+  {{- end}}
+  selector:
+  {{- range $key, $value := .selector }}
+    {{ $key }}: '{{ $value }}'
+  {{- end}}
+  type: LoadBalancer
+{{- end}}

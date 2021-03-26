@@ -1,0 +1,97 @@
+{{- with $.Values.heartbeat}}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: heartbeat-deployment-config
+  namespace: {{ $.Values.cluster.namespace }}
+  labels:
+    k8s-app: heartbeat
+data:
+  heartbeat.yml: |-
+    # heartbeat.autodiscover:
+    #  # Autodiscover pods
+    #  providers:
+    #    - type: kubernetes
+    #      resource: pod
+    #      scope: cluster
+    #      node: ${NODE_NAME}
+    #      hints.enabled: true
+    #    - type: kubernetes
+    #      resource: service
+    #      scope: cluster
+    #      node: ${NODE_NAME}
+    #      hints.enabled: true            
+    
+    #  # Autodiscover nodes
+    #  providers:
+    #    - type: kubernetes
+    #      resource: node
+    #      node: ${NODE_NAME}
+    #      scope: cluster
+    #      templates:
+    #        # Example, check SSH port of all cluster nodes:
+    #        - condition: ~
+    #          config:
+    #            - hosts:
+    #                - ${data.host}:22
+    #              name: ${data.kubernetes.node.name}
+    #              schedule: '@every 10s'
+    #              timeout: 5s
+    #              type: tcp
+    
+
+    # logging.level: debug
+
+    heartbeat.monitors:
+    - type: http
+      id: elastic-http
+      name: elastic-http
+      schedule: '@every 5s'
+      urls: ['https://{{ $.Values.elasticsearch.services.http.name }}.{{ $.Values.cluster.namespace }}.svc.cluster.local:9200']
+      username: {{ $.Values.sa.username }}
+      password: {{ $.Values.sa.password }}
+      ssl:
+        certificate_authorities: ["/etc/pki/client/ca.crt"]
+      check.response:
+        status: 200
+    - type: http
+      id: kibana-http
+      name: kibana-http
+      schedule: '@every 5s'
+      urls: ['https://{{ $.Values.kibana.services.http.name }}.{{ $.Values.cluster.namespace }}.svc.cluster.local:5601/api/status']
+      username: {{ $.Values.sa.username }}
+      password: {{ $.Values.sa.password }}
+      ssl:
+        certificate_authorities: ["/etc/pki/client/ca.crt"]
+      check.response:
+        status: 200
+
+    processors:
+      - add_kubernetes_metadata:
+
+    http.enabled: true
+    http.host: 0.0.0.0
+    http.port: 9002
+    monitoring:
+      enabled: true
+
+    setup:
+      kibana:
+        host: https://{{ $.Values.kibana.services.http.name }}.{{ $.Values.cluster.namespace }}.svc.cluster.local:5601
+        username: {{ $.Values.sa.username }}
+        password: {{ $.Values.sa.password }}
+        ssl.enabled: true
+        ssl.certificate_authorities: ["/etc/pki/client/ca.crt"]
+        ssl.certificate: "/etc/pki/client/tls.crt"
+        ssl.key: "/etc/pki/client/tls.key"    
+
+    output.elasticsearch:
+      hosts: ['https://{{ $.Values.elasticsearch.services.http.name }}.{{ $.Values.cluster.namespace }}.svc.cluster.local:9200']
+      username: {{ $.Values.sa.username }}
+      password: {{ $.Values.sa.password }}
+      ssl.certificate_authorities: ["/etc/pki/client/ca.crt"]
+      ssl.certificate: "/etc/pki/client/tls.crt"
+      ssl.key: "/etc/pki/client/tls.key"  
+
+{{- end}}

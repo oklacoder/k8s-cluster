@@ -1,0 +1,56 @@
+{{- with $.Values.kibana }}
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: {{ .labels.app }}-{{ .labels.role }}
+  namespace: {{$.Values.cluster.namespace}}
+spec:
+  replicas: {{.replicas}}
+  selector:
+    matchLabels:
+    {{- range $key, $value := .labels }}
+      {{ $key }}: '{{ $value }}'
+    {{- end}}
+  template:
+    metadata:
+      annotations:    
+        co.elastic.logs/module: kibana
+        co.elastic.logs/fileset.stdout: log
+        co.elastic.metrics/module: kibana
+        co.elastic.metrics/metricsets: status,stats
+        co.elastic.metrics/hosts: '${data.host}:5601'
+        co.elastic.metrics/username: {{ $.Values.sa.username }}
+        co.elastic.metrics/password: {{ $.Values.sa.password }}
+      labels:
+      {{- range $key, $value := .labels }}
+        {{ $key }}: '{{ $value }}'
+      {{- end}}
+    spec:
+      containers:
+        - name: {{ .labels.app }}-{{ .labels.role }}
+          image: {{$.Values.kibana.image}}:{{$.Values.cluster.version}}
+          resources:
+          {{- with .resources }}
+            requests:
+            {{- range $key, $value := .requests }}
+              {{ $key }}: {{ quote $value }}
+            {{- end}}
+            limits:
+            {{- range $key, $value := .limits }}
+              {{ $key }}: {{ quote $value }}
+            {{- end}}
+          {{- end }}
+          env:
+          {{- range .env}}        
+          - name: {{.name}}
+            value: '{{.value}}'
+          {{- end}}
+          volumeMounts:
+          - name: cert
+            mountPath: /usr/share/kibana/config/certificates
+            readOnly: true
+      volumes:
+      - name: cert
+        secret:
+          secretName: elasticsearch-cert
+{{- end}}

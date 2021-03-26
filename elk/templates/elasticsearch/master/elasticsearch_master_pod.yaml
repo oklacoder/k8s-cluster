@@ -1,0 +1,50 @@
+{{- with $.Values.elasticsearch.master }}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ .labels.app }}-{{ .labels.role }}
+  namespace: {{$.Values.cluster.namespace}}
+  annotations:
+    co.elastic.logs/module: elasticsearch
+    co.elastic.logs/fileset.stdout: server
+    co.elastic.metrics/module: elasticsearch
+    co.elastic.metrics/metricsets: cluster_stats,node,node_stats,index,index_summary,shard
+    co.elastic.metrics/protocol: https
+    co.elastic.metrics/hosts: '${data.host}:9200'
+    co.elastic.metrics/username: {{ $.Values.sa.username }}
+    co.elastic.metrics/password: {{ $.Values.sa.password }}
+  labels:
+  {{- range $key, $value := .labels }}
+    {{ $key }}: '{{ $value }}'
+  {{- end}}
+spec:
+  containers:
+    - name: {{ .labels.app }}-{{ .labels.role }}
+      image: {{$.Values.elasticsearch.image}}:{{$.Values.cluster.version}}
+      resources:
+      {{- with .resources }}
+        requests:
+        {{- range $key, $value := .requests }}
+          {{ $key }}: {{ quote $value }}
+        {{- end}}
+        limits:
+        {{- range $key, $value := .limits }}
+          {{ $key }}: {{ quote $value }}
+        {{- end}}
+      {{- end }}
+      env:
+      - name: cluster.name
+        value: {{ $.Values.cluster.name }}
+      {{- range .env}}        
+      - name: {{.name}}
+        value: '{{.value}}'
+      {{- end}}
+      volumeMounts:
+      - name: cert
+        mountPath: /usr/share/elasticsearch/config/certificates
+        readOnly: true
+  volumes:
+  - name: cert
+    secret:
+      secretName: elasticsearch-cert
+{{- end}}

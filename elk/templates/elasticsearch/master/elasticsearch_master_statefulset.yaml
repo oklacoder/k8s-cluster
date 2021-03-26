@@ -1,0 +1,76 @@
+{{- with $.Values.elasticsearch.master }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .labels.app }}-{{ .labels.role }}
+  namespace: {{$.Values.cluster.namespace}}
+spec:  
+  replicas: {{.replicas}}
+  serviceName: {{ $.Values.elasticsearch.services.http.name}}
+  podManagementPolicy: "Parallel"
+  selector:
+    matchLabels:
+    {{- range $key, $value := .labels }}
+      {{ $key }}: '{{ $value }}'
+    {{- end}}
+  template:
+    metadata:
+      labels:
+      {{- range $key, $value := .labels }}
+        {{ $key }}: '{{ $value }}'
+      {{- end}}
+      annotations:
+        co.elastic.logs/module: elasticsearch
+        co.elastic.logs/fileset.stdout: server
+        co.elastic.metrics/module: elasticsearch
+        co.elastic.metrics/metricsets: cluster_stats,node,node_stats,index,index_summary,shard
+        co.elastic.metrics/protocol: https
+        co.elastic.metrics/hosts: '${data.host}:9200'
+        co.elastic.metrics/username: {{ $.Values.sa.username }}
+        co.elastic.metrics/password: {{ $.Values.sa.password }}
+    spec:
+      containers:
+        - name: {{ .labels.app }}-{{ .labels.role }}
+          image: {{$.Values.elasticsearch.image}}:{{$.Values.cluster.version}}
+          resources:
+          {{- with .resources }}
+            requests:
+            {{- range $key, $value := .requests }}
+              {{ $key }}: {{ quote $value }}
+            {{- end}}
+            limits:
+            {{- range $key, $value := .limits }}
+              {{ $key }}: {{ quote $value }}
+            {{- end}}
+          {{- end }}
+          env:
+          - name: cluster.name
+            value: {{ $.Values.cluster.name }}
+          {{- range .env}}        
+          - name: {{.name}}
+            value: '{{.value}}'
+          {{- end}}
+          volumeMounts:
+          - name: cert
+            mountPath: /usr/share/elasticsearch/config/certificates
+            readOnly: true
+          {{if .storage }}
+          - name: storage
+            mountPath: /var/data/elasticsearch      
+          {{- end}}
+      volumes:
+      - name: cert
+        secret:
+          secretName: elasticsearch-cert
+  {{if .storage }}
+  volumeClaimTemplates:
+    - metadata:
+        name: storage
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: {{ .storage.class }}
+        resources:
+          requests:
+            storage: {{ .storage.space }}
+  {{- end}}
+{{- end}}

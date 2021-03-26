@@ -1,0 +1,27 @@
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: elastic-ingress
+  namespace: default
+  annotations:
+    traefik.ingress.kubernetes.io/rule-type: PathPrefix
+    traefik.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/issuer: "selfsigned-issuer"
+spec:
+  rules:
+  - host: {{$.Values.ingress.elasticsearch.host}}
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: {{$.Values.elasticsearch.services.http.name}}
+          servicePort: 9200
+  - host: {{$.Values.ingress.kibana.host}}
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: {{$.Values.kibana.services.http.name}}
+          servicePort: 9200
+  tls:
+  - secretName: elasticsearch-cert

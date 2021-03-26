@@ -1,22 +1,69 @@
-# ---
-# apiVersion: cert-manager.io/v1alpha2
-# kind: Issuer
-# metadata:
-#   name: selfsigned-issuer
-# spec:
-#   selfSigned: {}
-# ---
-# apiVersion: cert-manager.io/v1alpha2
-# kind: Certificate
-# metadata:
-#   name: {{$.Values.cluster.name}}-es-cert
-# spec:
-#   isCA: true
-#   dnsNames:
-#     - {{$.Values.cluster.name}}-es-http
-#     - {{$.Values.cluster.name}}-es-http.default.svc
-#     - {{$.Values.cluster.name}}-es-http.default.svc.cluster.local
-#   issuerRef:
-#     kind: Issuer
-#     name: selfsigned-issuer
-#   secretName: {{$.Values.cluster.name}}-es-cert
+---
+apiVersion: cert-manager.io/v1alpha2
+kind: Issuer
+metadata:
+  name: selfsigned-issuer
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1alpha2
+kind: Certificate
+metadata:
+  name: {{$.Values.cluster.name}}-es-cert-ca
+  namespace: default
+spec:
+  secretName: {{$.Values.cluster.name}}-es-cert-ca
+  isCA: true
+  keySize: 2048
+  keyAlgorithm: rsa
+  keyEncoding: pkcs1
+  commonName: elastic
+  dnsNames:
+    - elastic.okstovall.com
+    - {{$.Values.cluster.name}}-es-http
+    - {{$.Values.cluster.name}}-es-http.default.svc
+    - {{$.Values.cluster.name}}-es-http.default.svc.cluster.local
+    - kibana.okstovall.com
+    - {{$.Values.cluster.name}}-kb-http
+    - {{$.Values.cluster.name}}-kb-http.default.svc
+    - {{$.Values.cluster.name}}-kb-http.default.svc.cluster.local
+  issuerRef:
+    # kind: ClusterIssuer
+    # name: letsencrypt-staging
+    kind: Issuer
+    name: selfsigned-issuer
+---
+apiVersion: cert-manager.io/v1alpha2
+kind: Issuer
+metadata: 
+  name: ca-issuer
+spec:
+  ca:
+    secretName: elasticsearch-cert-ca
+---
+apiVersion: cert-manager.io/v1alpha2
+kind: Certificate
+metadata:
+  name: {{$.Values.cluster.name}}-es-cert
+  namespace: default
+spec:
+  secretName: {{$.Values.cluster.name}}-es-cert
+  isCA: false
+  keySize: 2048
+  keyAlgorithm: rsa
+  keyEncoding: pkcs1
+  commonName: elastic
+  dnsNames:
+    - elastic.okstovall.com
+    - {{$.Values.cluster.name}}-es-http
+    - {{$.Values.cluster.name}}-es-http.default.svc
+    - {{$.Values.cluster.name}}-es-http.default.svc.cluster.local
+    - kibana.okstovall.com
+    - {{$.Values.cluster.name}}-kb-http
+    - {{$.Values.cluster.name}}-kb-http.default.svc
+    - {{$.Values.cluster.name}}-kb-http.default.svc.cluster.local
+  issuerRef:
+    # kind: ClusterIssuer
+    # name: letsencrypt-staging
+    kind: Issuer
+    name: ca-issuer

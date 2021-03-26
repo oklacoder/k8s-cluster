@@ -1,0 +1,165 @@
+sa:
+  username: elastic
+  password: elastic
+
+ingress:
+  elasticsearch:
+    host: elastic.okstovall.com
+  kibana:
+    host: kibana.okstovall.com
+
+cluster:
+  name: sample-cluster
+  namespace: default
+  version: 7.9.0
+
+elasticsearch:
+  image: docker.elastic.co/elasticsearch/elasticsearch
+  services:
+    http:
+      name: elasticsearch-http
+      selector:
+        app: elasticsearch
+        elastic-http: true
+      ports:
+      - name: https
+        port: 9200
+        targetPort: 9200
+      - name: transport
+        port: 9300
+        targetPort: 9300
+    discovery:
+      name: elasticsearch-discovery-service
+      ports:
+      - name: transport
+        protocol: TCP
+        port: 9300
+        targetPort: 9300
+      - name: http
+        protocol: TCP
+        port: 9200
+        targetPort: 9200
+      selector:
+        app: elasticsearch
+        elastic-master: true
+  master:
+    replicas: 2
+    resources:
+      requests:
+        memory: 2Gi
+      limits:
+        memory: 2Gi
+    labels:
+      app: elasticsearch
+      role: master
+      elastic-master: true
+      elastic-http: true
+    storage:
+      class: longhorn
+      space: 50Gi
+    env:
+    - name: ES_JAVA_OPTS
+      value: -Xms1g -Xmx1g
+    - name: xpack.license.self_generated.type
+      value: basic
+    - name: discovery.seed_hosts
+      value: elasticsearch-discovery-service
+    - name: cluster.initial_master_nodes
+      value: elasticsearch-master
+    - name: xpack.security.enabled
+      value: true
+    - name: xpack.security.http.ssl.enabled
+      value: true
+    - name: xpack.security.http.ssl.certificate_authorities
+      value: /usr/share/elasticsearch/config/certificates/ca.crt
+    - name: xpack.security.http.ssl.certificate
+      value: /usr/share/elasticsearch/config/certificates/tls.crt
+    - name: xpack.security.http.ssl.key
+      value: /usr/share/elasticsearch/config/certificates/tls.key
+    - name: xpack.security.transport.ssl.enabled
+      value: true
+    - name: xpack.security.transport.ssl.verification_mode
+      value: none
+    - name: xpack.security.transport.ssl.certificate_authorities
+      value: /usr/share/elasticsearch/config/certificates/ca.crt
+    - name: xpack.security.transport.ssl.certificate
+      value: /usr/share/elasticsearch/config/certificates/tls.crt
+    - name: xpack.security.transport.ssl.key
+      value: /usr/share/elasticsearch/config/certificates/tls.key
+    - name: ELASTIC_PASSWORD
+      value: elastic
+    - name: xpack.license.self_generated.type
+      value: basic
+    - name: xpack.monitoring.collection.enabled
+      value: true
+  client: {}
+
+kibana:
+  image: docker.elastic.co/kibana/kibana
+  services:
+    http:
+      name: kibana-http
+      selector:
+        app: elasticsearch
+        role: kibana
+      ports:
+      - name: https
+        port: 5601
+        targetPort: 5601
+  replicas: 1
+  keys:
+    xpack_security: sample_encryption_key_sample_encryption_key
+    xpack_reporting: sample_encryption_key_sample_encryption_key
+    xpack_encryptedobjects: sample_encryption_key_sample_encryption_key
+    xpack_encryptedsavedobjects: sample_encryption_key_sample_encryption_key
+  ssl:
+    certificate: /usr/share/kibana/config/certificates/tls.crt
+    key: /usr/share/kibana/config/certificates/tls.key
+    ca: /usr/share/kibana/config/certificates/ca.crt
+  logging:
+    verbose: true
+  labels:
+    app: elasticsearch
+    role: kibana
+  resources:
+    requests:
+      memory: 1Gi
+    limits:
+      memory: 1Gi
+  env:
+  - name: LOGGING_VERBOSE
+    value: false
+  - name: ELASTICSEARCH_HOSTS
+    value: https://elasticsearch-http.default.svc.cluster.local:9200
+  - name: ELASTICSEARCH_USERNAME
+    value: elastic
+  - name: ELASTICSEARCH_PASSWORD
+    value: elastic
+  - name: XPACK_SECURITY_ENABLED
+    value: true
+  - name: XPACK_SECURITY_ENCRYPTIONKEY
+    value: sample_encryption_key_sample_encryption_key
+  - name: XPACK_REPORTING_ENCRYPTIONKEY
+    value: sample_encryption_key_sample_encryption_key
+  - name: XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY
+    value: sample_encryption_key_sample_encryption_key
+  - name: XPACK_ENCRYPTEDOBJECTS_ENCRYPTIONKEY
+    value: sample_encryption_key_sample_encryption_key
+  - name: SERVER_SSL_ENABLED
+    value: true
+  - name: SERVER_SSL_CERTIFICATE
+    value: /usr/share/kibana/config/certificates/tls.crt
+  - name: SERVER_SSL_KEY
+    value: /usr/share/kibana/config/certificates/tls.key
+  - name: ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES
+    value: /usr/share/kibana/config/certificates/ca.crt
+
+filebeat:
+  name: filebeat
+  image: docker.elastic.co/beats/filebeat
+metricbeat:
+  name: metricbeat
+  image: docker.elastic.co/beats/metricbeat
+heartbeat:
+  name: heartbeat
+  image: docker.elastic.co/beats/heartbeat

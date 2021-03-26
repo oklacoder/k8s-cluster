@@ -1,0 +1,73 @@
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
+metadata:
+  name: quickstart
+spec:
+  version: 7.9.0
+  http:
+    tls:
+      selfSignedCertificate:
+        subjectAltNames:
+        - dns: elastic.okstovall.com
+        - dns: quickstart-es-http
+        - dns: quickstart-es-http.default.svc
+        - dns: quickstart-es-http.default.svc.cluster.local
+  nodeSets:
+  - name: default
+    count: 1
+    config:
+      node.master: true
+      node.data: true
+      node.ingest: true
+      node.store.allow_mmap: false
+    volumeClaimTemplates:
+    - metadata:
+        name: elasticsearch-data
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+        storageClassName: longhorn
+---
+apiVersion: kibana.k8s.elastic.co/v1
+kind: Kibana
+metadata:
+  name: quickstart
+spec:
+  version: 7.9.0
+  count: 1
+  elasticsearchRef:
+    name: quickstart
+  http:
+    tls:
+      selfSignedCertificate:
+        subjectAltNames:
+        - dns: kibana.okstovall.com
+---
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: elastic-ingress
+  annotations:
+    traefik.ingress.kubernetes.io/rule-type: PathPrefix
+spec:
+  rules:
+  - host: elastic.okstovall.com
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: quickstart-es-http
+          servicePort: 9200
+  - host: kibana.okstovall.com
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: quickstart-kb-http
+          servicePort: 5601
+
+#default-quickstart-kibana-user
+#C98y5RK9Mc198KkadKH2w54v

@@ -1,0 +1,94 @@
+{{- with $.Values.heartbeat}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{.name}}
+  namespace: {{ $.Values.cluster.namespace }}
+  labels:
+    k8s-app: heartbeat
+    app: elasticsearch
+    role: heartbeat
+spec:
+  selector:
+    matchLabels:
+      app: elasticsearch
+      role: heartbeat
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+        role: heartbeat
+      annotations:  
+        co.elastic.metrics/module: beat
+        co.elastic.metrics/metricsets: state,stats
+        co.elastic.metrics/username: {{ $.Values.sa.username }}
+        co.elastic.metrics/password: {{ $.Values.sa.password }}
+
+        # co.elastic.monitor/type: "http"
+        # co.elastic.monitor/id: ${pod.name}
+        # co.elastic.monitor/name: {{ .name }}
+        # co.elastic.monitor/schedule: "@every 5s"
+        # co.elastic.monitor/hosts: "http://${data.host}:9002/state"
+        # co.elastic.monitor/check.response.status: "200"
+    spec:
+      serviceAccountName: heartbeat
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+      - name: {{.name}}
+        image: {{ .image }}:{{ $.Values.cluster.version }}
+        args: [
+          "-c", "/etc/heartbeat.yml",
+          "-e"
+        ]
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        securityContext:
+          runAsUser: 0
+        resources:
+          limits:
+            memory: 200Mi
+          requests:
+            cpu: 100m
+            memory: 100Mi
+        volumeMounts:
+        - name: cert
+          mountPath: /etc/pki/client/
+        - name: config
+          mountPath: /etc/heartbeat.yml
+          readOnly: true
+          subPath: heartbeat.yml
+        - name: data
+          mountPath: /usr/share/heartbeat/data
+        - name: varlogcontainers
+          mountPath: /var/log/containers
+        - name: varlogpods
+          mountPath: /var/log/pods
+        - name: varlibdockercontainers
+          mountPath: /var/lib/docker/containers
+      volumes:
+      - name: cert
+        secret:
+          secretName: elasticsearch-cert
+      - name: config
+        configMap:
+          defaultMode: 0600
+          name: heartbeat-deployment-config
+      - name: data
+        hostPath:
+          path: /var/lib/heartbeat-data
+          type: DirectoryOrCreate
+      - name: varlogcontainers
+        hostPath:
+          path: /var/log/containers
+      - name: varlogpods
+        hostPath:
+          path: /var/log/pods
+      - name: varlibdockercontainers
+        hostPath:
+          path: /var/lib/docker/containers
+
+{{- end}}

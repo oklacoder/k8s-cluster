@@ -1,0 +1,62 @@
+{{- with $.Values.filebeat}}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: filebeat-config
+  namespace: {{ $.Values.cluster.namespace }}
+  labels:
+    k8s-app: filebeat
+data:
+  filebeat.yml: |-
+    # filebeat.inputs:
+    # - type: container
+    #   paths:
+    #     - /var/log/containers/*.log
+    #   processors:
+    #     - add_kubernetes_metadata:
+    #         host: ${NODE_NAME}
+    #         matchers:
+    #         - logs_path:
+    #             logs_path: "/var/log/containers/"
+
+    # To enable hints based autodiscover, remove `filebeat.inputs` configuration and uncomment this:
+    filebeat.autodiscover:
+     providers:
+       - type: kubernetes
+         node: ${NODE_NAME}
+         hints.enabled: true
+         hints.default_config:
+           type: container
+           paths:
+             - /var/log/containers/*${data.kubernetes.container.id}.log
+
+    processors:
+      - add_cloud_metadata:
+      - add_host_metadata:
+
+    http.enabled: true
+    http.host: 0.0.0.0
+    http.port: 9000
+    monitoring:
+      enabled: true
+      
+    setup:
+      kibana:
+        host: https://{{ $.Values.kibana.services.http.name }}.{{ $.Values.cluster.namespace }}.svc.cluster.local:5601
+        username: {{ $.Values.sa.username }}
+        password: {{ $.Values.sa.password }}
+        ssl.enabled: true
+        ssl.certificate_authorities: ["/etc/pki/client/ca.crt"]
+        ssl.certificate: "/etc/pki/client/tls.crt"
+        ssl.key: "/etc/pki/client/tls.key"    
+
+    output.elasticsearch:
+      hosts: ['https://{{ $.Values.elasticsearch.services.http.name }}.{{ $.Values.cluster.namespace }}.svc.cluster.local:9200']
+      username: {{ $.Values.sa.username }}
+      password: {{ $.Values.sa.password }}
+      ssl.certificate_authorities: ["/etc/pki/client/ca.crt"]
+      ssl.certificate: "/etc/pki/client/tls.crt"
+      ssl.key: "/etc/pki/client/tls.key"  
+
+{{- end}}

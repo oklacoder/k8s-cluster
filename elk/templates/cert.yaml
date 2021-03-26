@@ -1,0 +1,126 @@
+---
+apiVersion: cert-manager.io/v1alpha2
+kind: Issuer
+metadata:
+  name: selfsigned-issuer
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1alpha2
+kind: Certificate
+metadata:
+  name: elasticsearch-cert-ca
+  namespace: default
+spec:
+  secretName: elasticsearch-cert-ca
+  isCA: true
+  keySize: 2048
+  keyAlgorithm: rsa
+  keyEncoding: pkcs1
+  commonName: elastic
+  dnsNames:
+    - elastic.okstovall.com
+    - elasticsearch-http
+    - elasticsearch-http.default.svc
+    - elasticsearch-http.default.svc.cluster.local
+    - kibana.okstovall.com
+    - kibana-http
+    - kibana-http.default.svc
+    - kibana-http.default.svc.cluster.local
+  issuerRef:
+    # kind: ClusterIssuer
+    # name: letsencrypt-staging
+    kind: Issuer
+    name: selfsigned-issuer
+---
+apiVersion: cert-manager.io/v1alpha2
+kind: Issuer
+metadata: 
+  name: ca-issuer
+spec:
+  ca:
+    secretName: elasticsearch-cert-ca
+---
+apiVersion: cert-manager.io/v1alpha2
+kind: Certificate
+metadata:
+  name: elasticsearch-cert
+  namespace: default
+spec:
+  secretName: elasticsearch-cert
+  isCA: false
+  keySize: 2048
+  keyAlgorithm: rsa
+  keyEncoding: pkcs1
+  commonName: elastic
+  dnsNames:
+    - elasticsearch.okstovall.com
+    - elasticsearch-http
+    - elasticsearch-http.default.svc
+    - elasticsearch-http.default.svc.cluster.local
+    - kibana.okstovall.com
+    - kibana-http
+    - kibana-http.default.svc
+    - kibana-http.default.svc.cluster.local
+  issuerRef:
+    # kind: ClusterIssuer
+    # name: letsencrypt-staging
+    kind: Issuer
+    name: ca-issuer
+---
+# apiVersion: cert-manager.io/v1alpha2
+# kind: Issuer
+# metadata:
+#   name: selfsigned-issuer
+#   namespace: kube-system
+# spec:
+#   selfSigned: {}
+# ---
+# apiVersion: cert-manager.io/v1alpha2
+# kind: Certificate
+# metadata:
+#   name: beat-cert-ca
+#   namespace: kube-system
+# spec:
+#   secretName: beat-cert-ca
+#   isCA: true
+#   keySize: 2048
+#   keyAlgorithm: rsa
+#   keyEncoding: pkcs1
+#   commonName: beat
+#   dnsNames:
+#     - filebeat.okstovall.com
+#   issuerRef:
+#     # kind: ClusterIssuer
+#     # name: letsencrypt-staging
+#     kind: Issuer
+#     name: selfsigned-issuer
+# ---
+# apiVersion: cert-manager.io/v1alpha2
+# kind: Issuer
+# metadata: 
+#   name: ca-issuer
+#   namespace: kube-system
+# spec:
+#   ca:
+#     secretName: beat-cert-ca
+# ---
+# apiVersion: cert-manager.io/v1alpha2
+# kind: Certificate
+# metadata:
+#   name: beat-cert
+#   namespace: kube-system
+# spec:
+#   secretName: beat-cert
+#   isCA: false
+#   keySize: 2048
+#   keyAlgorithm: rsa
+#   keyEncoding: pkcs1
+#   commonName: beat
+#   dnsNames:
+#     - filebeat.okstovall.com
+#   issuerRef:
+#     # kind: ClusterIssuer
+#     # name: letsencrypt-staging
+#     kind: Issuer
+#     name: ca-issuer
